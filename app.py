@@ -6,7 +6,8 @@ import plotly.graph_objs as go
 import plotly.figure_factory as ff
 import seaborn as sns
 import matplotlib.pyplot as plt
-from statsmodels.tsa.api import ExponentialSmoothing
+from statsmodels.tsa.api import ExponentialSmoothing, SARIMAX
+from prophet import Prophet
 import io
 import base64
 
@@ -41,6 +42,17 @@ app.layout = html.Div([
         id="smooth-toggle",
         options=[{"label": "Apply Rolling Average", "value": "smooth"}],
         value=[]
+    ),
+
+    dcc.Dropdown(
+        id="model-selector",
+        options=[
+            {"label": "Exponential Smoothing", "value": "exp"},
+            {"label": "ARIMA", "value": "arima"},
+            {"label": "Prophet", "value": "prophet"}
+        ],
+        value="exp",
+        style={"marginTop": "10px"}
     ),
 
     dcc.Graph(id="time-series"),
@@ -94,24 +106,58 @@ def update_time_series(selected, start_date, end_date, smooth):
 
 @app.callback(
     Output("forecast-series", "figure"),
-    Input("agegroup-filter", "value")
+    Input("agegroup-filter", "value"),
+    Input("model-selector", "value")
 )
-def update_forecast(selected):
+def update_forecast(selected, model_type):
     temp = df[df["AgeGroup"].isin(selected)]
     fig = go.Figure()
     for group in selected:
         group_df = temp[temp["AgeGroup"] == group].sort_values("Date")
         ts = group_df.groupby("Date")["Unemployment"].mean().asfreq("MS")
-
         ts = ts.interpolate()
+
         try:
-            model = ExponentialSmoothing(ts, seasonal="add", seasonal_periods=12)
-            fit = model.fit()
-            forecast = fit.forecast(12)
-            fig.add_trace(go.Scatter(x=forecast.index, y=forecast, mode="lines", name=f"{group} Forecast"))
+            if model_type == "exp":
+                model = ExponentialSmoothing(ts, seasonal="add", seasonal_periods=12)
+                fit = model.fit()
+                forecast = fit.forecast(12)
+                ci_upper = forecast + ts.std()
+                ci_lower = forecast - ts.std()
+                fig.add_trace(go.Scatter(x=ts.index, y=ts, mode="lines", name=f"{group} Actual"))
+                fig.add_trace(go.Scatter(x=forecast.index, y=forecast, mode="lines", name=f"{group} Forecast"))
+                fig.add_trace(go.Scatter(x=forecast.index, y=ci_upper, mode="lines", line=dict(dash='dash'),
+                                         name=f"{group} Upper CI", showlegend=False))
+                fig.add_trace(go.Scatter(x=forecast.index, y=ci_lower, mode="lines", line=dict(dash='dash'),
+                                         name=f"{group} Lower CI", fill='tonexty', showlegend=False))
+            elif model_type == "arima":
+                model = SARIMAX(ts, order=(1, 1, 1), seasonal_order=(1, 1, 1, 12))
+                fit = model.fit(disp=False)
+                forecast = fit.get_forecast(steps=12)
+                pred = forecast.predicted_mean
+                ci = forecast.conf_int()
+                fig.add_trace(go.Scatter(x=ts.index, y=ts, mode="lines", name=f"{group} Actual"))
+                fig.add_trace(go.Scatter(x=pred.index, y=pred, mode="lines", name=f"{group} Forecast"))
+                fig.add_trace(go.Scatter(x=pred.index, y=ci.iloc[:, 0], mode="lines", line=dict(dash='dash'),
+                                         name=f"{group} Lower CI", showlegend=False))
+                fig.add_trace(go.Scatter(x=pred.index, y=ci.iloc[:, 1], mode="lines", line=dict(dash='dash'),
+                                         name=f"{group} Upper CI", fill='tonexty', showlegend=False))
+            elif model_type == "prophet":
+                prophet_df = group_df[["Date", "Unemployment"]].rename(columns={"Date": "ds", "Unemployment": "y"})
+                m = Prophet()
+                m.fit(prophet_df)
+                future = m.make_future_dataframe(periods=12, freq='M')
+                forecast = m.predict(future)
+                fig.add_trace(go.Scatter(x=prophet_df["ds"], y=prophet_df["y"], mode="lines", name=f"{group} Actual"))
+                fig.add_trace(go.Scatter(x=forecast["ds"], y=forecast["yhat"], mode="lines", name=f"{group} Forecast"))
+                fig.add_trace(go.Scatter(x=forecast["ds"], y=forecast["yhat_upper"], mode="lines", line=dict(dash='dash'),
+                                         name=f"{group} Upper CI", showlegend=False))
+                fig.add_trace(go.Scatter(x=forecast["ds"], y=forecast["yhat_lower"], mode="lines", line=dict(dash='dash'),
+                                         name=f"{group} Lower CI", fill='tonexty', showlegend=False))
         except Exception as e:
             continue
-    fig.update_layout(title="Forecasted Unemployment (Next 12 Months)", xaxis_title="Date")
+
+    fig.update_layout(title="Forecasted Unemployment (Next 12 Months)", xaxis_title="Date", yaxis_title="Unemployment Rate")
     return fig
 
 @app.callback(
@@ -153,7 +199,7 @@ def update_yoy(selected):
 def update_heatmap(selected):
     temp = df[df["AgeGroup"].isin(selected)]
     yearly_avg = temp.groupby(["Year", "AgeGroup"])["Unemployment"].mean().unstack()
-    yoy = yearly_avg.diff().T  # Transposed to match sns heatmap style
+    yoy = yearly_avg.diff().T
 
     fig = go.Figure(data=go.Heatmap(
         z=yoy.values,
