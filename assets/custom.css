@@ -1,0 +1,96 @@
+/* Dark Mode Theme + Bootstrap-Inspired Layout for Dash Unemployment Dashboard */
+
+/* Root Variables */
+/* Page Styling */
+
+body {
+    background-color: #1e1e2f;
+    font-family: 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    color: #e0e0e0;
+}
+
+/* Header Styling */
+h1 {
+    text-align: center;
+    color: #ffffff;
+    margin-top: 30px;
+    font-weight: 300;
+}
+
+/* Dropdowns and Controls */
+.Select-control,
+.dash-dropdown,
+.dash-radio-items,
+.dash-checklist {
+    margin: 10px 0;
+    font-size: 16px;
+    background-color: #2e2e3f;
+    color: #ffffff;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 8px;
+}
+
+/* Graph Container */
+#time-series,
+#monthly-trend,
+#yoy-trend,
+#forecast-series,
+#heatmap {
+    border-radius: 8px;
+    background-color: #2a2a3a;
+    padding: 10px;
+    margin-top: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Date Picker */
+.DateRangePicker {
+    margin-top: 10px;
+}
+
+/* Responsiveness */
+.js-plotly-plot {
+    max-width: 100%;
+}
+
+/* Buttons */
+button {
+    background-color: #336699;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 10px 15px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #4477aa;
+}
+
+/* Typography */
+h2, h3, h4, h5, h6 {
+    color: #ffffff;
+    font-weight: 300;
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
+
+p {
+    color: #d0d0d0;
+    line-height: 1.6;
+    font-size: 1.5rem;
+}
+
+/* Utility */
+.container {
+    width: 85%;
+    margin: auto;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+
+
