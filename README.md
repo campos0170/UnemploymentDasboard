@@ -2,7 +2,7 @@
 
 An interactive data visualization dashboard built with **Dash**, **Plotly**, and **StatsModels**, enabling users to explore U.S. unemployment trends across different **age groups** and **time periods**, with built-in **forecasting** features using **Exponential Smoothing**, **ARIMA**, and **Prophet**.
 
-![screenshot](assets/demo_screenshot.png)
+![screenshot](assets/screenshot_png.png)
 
 ---
 
